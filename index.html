@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WWI Biplane Dogfight</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-container">
+        <h1>WWI Biplane Dogfight</h1>
+        <div class="scoreboard">
+            <div class="score british">
+                <h3>🇬🇧 British RAF</h3>
+                <p>Score: <span id="british-score">0</span></p>
+            </div>
+            <div class="score german">
+                <h3>🇩🇪 German Luftstreitkräfte</h3>
+                <p>Score: <span id="german-score">0</span></p>
+            </div>
+        </div>
+        <canvas id="gameCanvas" width="1200" height="700"></canvas>
+        <div class="controls">
+            <div class="player-controls">
+                <h4>British Plane (You)</h4>
+                <p><strong>WASD</strong> - Move | <strong>SPACE</strong> - Shoot</p>
+            </div>
+            <div class="info">
+                <p id="game-status">Press any key to start!</p>
+            </div>
+        </div>
+    </div>
+    <script src="game.js"></script>
+</body>
+</html>
