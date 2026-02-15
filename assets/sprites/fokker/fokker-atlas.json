@@ -1,0 +1,52 @@
+{
+    "texture": "fokker_dr1_red_small_atlas.png",
+    "frame_width": 256,
+    "frame_height": 128,
+    "columns": 4,
+    "rows": 3,
+    "pivot_pixels": {
+        "x": 128,
+        "y": 64
+    },
+    "pivot_normalized": {
+        "x": 0.5,
+        "y": 0.5
+    },
+    "animations": {
+        "fly": {
+            "row": 0,
+            "frames": [
+                0,
+                1,
+                2,
+                3
+            ],
+            "fps": 8,
+            "loop": true
+        },
+        "shoot": {
+            "row": 1,
+            "frames": [
+                0,
+                1,
+                2,
+                3
+            ],
+            "fps": 12,
+            "loop": true
+        },
+        "explode": {
+            "row": 2,
+            "frames": [
+                0,
+                1,
+                2,
+                3
+            ],
+            "fps": 10,
+            "loop": false
+        }
+    },
+    "layout": "Grid 4x3, frames ordered left-to-right per row",
+    "notes": "All frames locked to 256x128. Aircraft scaled to fully fit inside frame. Pivot fixed at center of body."
+}

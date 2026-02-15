@@ -10,12 +10,14 @@ const gameState = {
 
 const keys = {};
 
-// Load sprite sheet and atlas
-const spriteSheet = new Image();
+// Load sprite sheets and atlas
+const sopwithSprite = new Image();
+const fokkerSprite = new Image();
 let spritesReady = false;
+let fokkerReady = false;
 
 // Embed atlas data directly to avoid CORS issues
-const spriteAtlas = {
+const sopwithAtlas = {
     "frame_width": 384,
     "frame_height": 341,
     "columns": 4,
@@ -42,26 +44,69 @@ const spriteAtlas = {
     }
 };
 
-console.log('Loading sprite image...');
+const fokkerAtlas = {
+    "frame_width": 384,
+    "frame_height": 341,
+    "columns": 4,
+    "rows": 3,
+    "animations": {
+        "fly": {
+            "row": 0,
+            "frames": [0, 1, 2, 3],
+            "fps": 8,
+            "loop": true
+        },
+        "shoot": {
+            "row": 1,
+            "frames": [0, 1, 2, 3],
+            "fps": 12,
+            "loop": true
+        },
+        "explode": {
+            "row": 2,
+            "frames": [0, 1, 2, 3],
+            "fps": 10,
+            "loop": false
+        }
+    }
+};
 
-spriteSheet.onload = () => {
+console.log('Loading sprite images...');
+
+sopwithSprite.onload = () => {
     spritesReady = true;
-    console.log('✓ Sprites loaded! Size:', spriteSheet.width, 'x', spriteSheet.height);
+    console.log('✓ Sopwith sprites loaded! Size:', sopwithSprite.width, 'x', sopwithSprite.height);
 };
 
-spriteSheet.onerror = (err) => {
-    console.error('✗ Sprite image failed to load:', err);
+sopwithSprite.onerror = (err) => {
+    console.error('✗ Sopwith sprite failed to load:', err);
 };
 
-spriteSheet.src = 'assets/sprites/sopwith/sopwith-sprite.png';
+fokkerSprite.onload = () => {
+    fokkerReady = true;
+    console.log('✓ Fokker sprites loaded! Size:', fokkerSprite.width, 'x', fokkerSprite.height);
+};
+
+fokkerSprite.onerror = (err) => {
+    console.error('✗ Fokker sprite failed to load:', err);
+};
+
+sopwithSprite.src = 'assets/sprites/sopwith/sopwith-sprite.png';
+fokkerSprite.src = 'assets/sprites/fokker/fokker-sprite.png';
 
 class Plane {
     constructor(x, y, team) {
         this.x = x;
         this.y = y;
         this.team = team;
-        this.width = 160;
-        this.height = 128;
+        // German planes slightly smaller
+        if (team === 'german') {
+            this.width = 140;
+            this.height = 112;
+        } else {
+            this.width = 160;
+            this.height = 128;
+        }
         this.speed = 3;
         this.health = 100;
         this.bullets = [];
@@ -76,15 +121,15 @@ class Plane {
     draw() {
         ctx.save();
         
-        // Debug log (remove after testing)
-        if (this.team === 'british' && Math.random() < 0.01) {
-            console.log('Sprites ready:', spritesReady, 'Atlas:', !!spriteAtlas, 'Image complete:', spriteSheet.complete);
-        }
+        // Select sprite and atlas based on team
+        const useSprite = this.team === 'british' ? (spritesReady && sopwithAtlas) : (fokkerReady && fokkerAtlas);
+        const sprite = this.team === 'british' ? sopwithSprite : fokkerSprite;
+        const atlas = this.team === 'british' ? sopwithAtlas : fokkerAtlas;
         
-        if (spritesReady && spriteAtlas) {
-            const anim = spriteAtlas.animations[this.animationState];
-            const frameWidth = spriteAtlas.frame_width;
-            const frameHeight = spriteAtlas.frame_height;
+        if (useSprite) {
+            const anim = atlas.animations[this.animationState];
+            const frameWidth = atlas.frame_width;
+            const frameHeight = atlas.frame_height;
             const fps = anim.fps;
             
             // Animate frames
@@ -97,6 +142,7 @@ class Plane {
                 // Handle explosion end
                 if (this.animationState === 'explode' && !anim.loop && this.frame === 0) {
                     this.exploding = false;
+                    this.animationState = 'fly';
                 }
             }
             
@@ -104,24 +150,29 @@ class Plane {
             const sx = frameIndex * frameWidth;
             const sy = anim.row * frameHeight;
             
-            // Reduce source height significantly to avoid bleeding into next row
-            const actualFrameHeight = frameHeight - 80;
-            
-            // Add offset compensation for different animation states
+            // Team-specific adjustments
+            let actualFrameHeight = frameHeight;
             let offsetY = 0;
-            if (this.animationState === 'shoot') {
-                offsetY = 45; // Compensate for upward jump
-            } else if (this.animationState === 'explode') {
-                offsetY = 45; // Align explosion sprite
-            }
             
             if (this.team === 'british') {
-                ctx.drawImage(spriteSheet, sx, sy, frameWidth, actualFrameHeight, 
+                // Sopwith adjustments
+                actualFrameHeight = frameHeight - 80;
+                if (this.animationState === 'shoot' || this.animationState === 'explode') {
+                    offsetY = 45;
+                }
+                ctx.drawImage(sprite, sx, sy, frameWidth, actualFrameHeight, 
                              this.x, this.y + offsetY, this.width, this.height);
             } else {
-                // German planes use simple shapes for now
-                ctx.fillStyle = '#696969';
-                ctx.fillRect(this.x + 10, this.y + 15, 60, 10);
+                // Fokker - apply stronger adjustments
+                actualFrameHeight = frameHeight - 100;
+                if (this.animationState === 'shoot' || this.animationState === 'explode') {
+                    offsetY = 56;
+                }
+                // Flip horizontally to face left
+                ctx.translate(this.x + this.width, this.y + offsetY);
+                ctx.scale(-1, 1);
+                ctx.drawImage(sprite, sx, sy, frameWidth, actualFrameHeight, 
+                             0, 0, this.width, this.height);
             }
         } else {
             // Fallback to simple shapes
@@ -135,9 +186,11 @@ class Plane {
         }
         
         if (!this.exploding) {
+            ctx.restore(); // Restore before drawing health bar
             this.drawHealthBar();
+        } else {
+            ctx.restore();
         }
-        ctx.restore();
     }
 
     drawHealthBar() {
@@ -313,6 +366,9 @@ function resetGame() {
     britishPlane.y = canvas.height / 2 - 15;
     britishPlane.health = 100;
     britishPlane.bullets = [];
+    britishPlane.animationState = 'fly';
+    britishPlane.exploding = false;
+    britishPlane.frame = 0;
     germanPlanes.length = 0;
     gameState.gameOver = false;
     gameState.running = true;
