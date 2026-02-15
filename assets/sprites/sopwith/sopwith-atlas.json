@@ -1,0 +1,47 @@
+{
+    "texture": "sopwith_camel_atlas.png",
+    "frame_width": 320,
+    "frame_height": 256,
+    "columns": 4,
+    "rows": 3,
+    "animations": {
+        "fly": {
+            "row": 0,
+            "frames": [
+                0,
+                1,
+                2,
+                3
+            ],
+            "fps": 8,
+            "loop": true
+        },
+        "shoot": {
+            "row": 1,
+            "frames": [
+                0,
+                1,
+                2,
+                3
+            ],
+            "fps": 12,
+            "loop": true
+        },
+        "explode": {
+            "row": 2,
+            "frames": [
+                0,
+                1,
+                2,
+                3
+            ],
+            "fps": 10,
+            "loop": false
+        }
+    },
+    "pivot": {
+        "x": 0.5,
+        "y": 0.5
+    },
+    "padding": 2
+}
