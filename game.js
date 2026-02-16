@@ -1,6 +1,10 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
+// Constants
+const TARGET_FPS = 60;
+const FPS_SAMPLE_SIZE = 10;
+
 const gameState = {
     running: false,
     britishScore: 0,
@@ -13,7 +17,8 @@ const gameState = {
     highScore: parseInt(localStorage.getItem('wwiHighScore')) || 0,
     showFPS: false,
     lastFrameTime: Date.now(),
-    fps: 60
+    fps: TARGET_FPS,
+    frameTimes: []
 };
 
 const keys = {};
@@ -327,10 +332,10 @@ class Plane {
             this.health = Math.min(this.maxHealth, this.health + 50);
         } else if (type === 'rapidfire') {
             this.rapidFire = true;
-            this.rapidFireTime = 300; // 5 seconds at 60fps
+            this.rapidFireTime = TARGET_FPS * 5; // 5 seconds
         } else if (type === 'shield') {
             this.shield = true;
-            this.shieldTime = 600; // 10 seconds at 60fps
+            this.shieldTime = TARGET_FPS * 10; // 10 seconds
         }
     }
     
@@ -508,9 +513,11 @@ function spawnPowerUp() {
 }
 
 function checkCollisions() {
-    // Check bullet hits on German planes
-    britishPlane.bullets.forEach((bullet, bIndex) => {
-        germanPlanes.forEach((plane, pIndex) => {
+    // Check bullet hits on German planes (iterate backwards to safely remove)
+    for (let bIndex = britishPlane.bullets.length - 1; bIndex >= 0; bIndex--) {
+        const bullet = britishPlane.bullets[bIndex];
+        for (let pIndex = germanPlanes.length - 1; pIndex >= 0; pIndex--) {
+            const plane = germanPlanes[pIndex];
             if (bullet.x > plane.x && bullet.x < plane.x + plane.width &&
                 bullet.y > plane.y && bullet.y < plane.y + plane.height && !plane.exploding) {
                 britishPlane.bullets.splice(bIndex, 1);
@@ -530,13 +537,15 @@ function checkCollisions() {
                         spawnPowerUp();
                     }
                 }
+                break; // Bullet hit, no need to check more planes
             }
-        });
-    });
+        }
+    }
 
-    // Check German bullet hits on British plane
+    // Check German bullet hits on British plane (iterate backwards)
     germanPlanes.forEach(plane => {
-        plane.bullets.forEach((bullet, bIndex) => {
+        for (let bIndex = plane.bullets.length - 1; bIndex >= 0; bIndex--) {
+            const bullet = plane.bullets[bIndex];
             if (bullet.x > britishPlane.x && bullet.x < britishPlane.x + britishPlane.width &&
                 bullet.y > britishPlane.y && bullet.y < britishPlane.y + britishPlane.height && !britishPlane.exploding) {
                 plane.bullets.splice(bIndex, 1);
@@ -546,7 +555,7 @@ function checkCollisions() {
                     setTimeout(() => gameOver('German'), 1000);
                 }
             }
-        });
+        }
 
         // Check plane collision
         if (britishPlane.x < plane.x + plane.width && britishPlane.x + britishPlane.width > plane.x &&
@@ -558,8 +567,9 @@ function checkCollisions() {
         }
     });
     
-    // Check power-up collection
-    powerUps.forEach((powerUp, index) => {
+    // Check power-up collection (iterate backwards)
+    for (let index = powerUps.length - 1; index >= 0; index--) {
+        const powerUp = powerUps[index];
         if (!powerUp.collected && 
             britishPlane.x < powerUp.x + powerUp.width && 
             britishPlane.x + britishPlane.width > powerUp.x &&
@@ -569,7 +579,7 @@ function checkCollisions() {
             britishPlane.applyPowerUp(powerUp.type);
             powerUps.splice(index, 1);
         }
-    });
+    }
 }
 
 function updateScore() {
@@ -593,9 +603,22 @@ function gameOver(reason) {
     gameState.running = false;
     const finalScore = gameState.britishScore;
     const isHighScore = finalScore === gameState.highScore && finalScore > 0;
-    document.getElementById('game-status').innerHTML = 
-        reason === 'German' ? `💥 You were shot down!<br>Final Score: ${finalScore}${isHighScore ? ' 🏆 NEW HIGH SCORE!' : ''}<br>Press R to restart` : 
-        `💥 Collision!<br>Final Score: ${finalScore}${isHighScore ? ' 🏆 NEW HIGH SCORE!' : ''}<br>Press R to restart`;
+    
+    const statusElement = document.getElementById('game-status');
+    statusElement.textContent = reason === 'German' ? 
+        '💥 You were shot down!' : '💥 Collision!';
+    
+    const scoreText = document.createElement('br');
+    statusElement.appendChild(scoreText);
+    
+    const scoreInfo = document.createTextNode(`Final Score: ${finalScore}${isHighScore ? ' 🏆 NEW HIGH SCORE!' : ''}`);
+    statusElement.appendChild(scoreInfo);
+    
+    const restartText = document.createElement('br');
+    statusElement.appendChild(restartText);
+    
+    const restartInfo = document.createTextNode('Press R to restart');
+    statusElement.appendChild(restartInfo);
 }
 
 function resetGame() {
@@ -684,11 +707,17 @@ function checkWaveProgress() {
 }
 
 function gameLoop() {
-    // Calculate FPS
+    // Calculate FPS with rolling average
     const now = Date.now();
     const delta = now - gameState.lastFrameTime;
-    gameState.fps = Math.round(1000 / delta);
     gameState.lastFrameTime = now;
+    
+    gameState.frameTimes.push(delta);
+    if (gameState.frameTimes.length > FPS_SAMPLE_SIZE) {
+        gameState.frameTimes.shift();
+    }
+    const avgDelta = gameState.frameTimes.reduce((a, b) => a + b, 0) / gameState.frameTimes.length;
+    gameState.fps = Math.round(1000 / avgDelta);
     
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
@@ -719,24 +748,26 @@ function gameLoop() {
 
         germanPlanes.forEach(plane => plane.update());
         
-        // Update power-ups
-        powerUps.forEach((powerUp, index) => {
+        // Update power-ups (iterate backwards)
+        for (let index = powerUps.length - 1; index >= 0; index--) {
+            const powerUp = powerUps[index];
             powerUp.update();
             if (powerUp.x < -50) {
                 powerUps.splice(index, 1);
             }
-        });
+        }
         
         checkCollisions();
     }
     
-    // Update and draw particles (even when paused for visual effect)
-    particles.forEach((particle, index) => {
+    // Update and draw particles (iterate backwards)
+    for (let index = particles.length - 1; index >= 0; index--) {
+        const particle = particles[index];
         particle.update();
         if (particle.isDead()) {
             particles.splice(index, 1);
         }
-    });
+    }
 
     britishPlane.draw();
     britishPlane.bullets.forEach(bullet => bullet.draw());
@@ -753,12 +784,12 @@ function gameLoop() {
     if (britishPlane.shield) {
         ctx.fillStyle = '#00FFFF';
         ctx.font = '14px Arial';
-        ctx.fillText(`Shield: ${Math.ceil(britishPlane.shieldTime / 60)}s`, 10, 20);
+        ctx.fillText(`Shield: ${Math.ceil(britishPlane.shieldTime / TARGET_FPS)}s`, 10, 20);
     }
     if (britishPlane.rapidFire) {
         ctx.fillStyle = '#FF00FF';
         ctx.font = '14px Arial';
-        ctx.fillText(`Rapid Fire: ${Math.ceil(britishPlane.rapidFireTime / 60)}s`, 10, britishPlane.shield ? 40 : 20);
+        ctx.fillText(`Rapid Fire: ${Math.ceil(britishPlane.rapidFireTime / TARGET_FPS)}s`, 10, britishPlane.shield ? 40 : 20);
     }
     
     // Draw FPS counter
