@@ -5,6 +5,18 @@ const ctx = canvas.getContext('2d');
 const TARGET_FPS = 60;
 const FPS_SAMPLE_SIZE = 10;
 
+// Gameplay constants
+const HEALTH_POWERUP_AMOUNT = 50;
+const RAPID_FIRE_DURATION_SECONDS = 5;
+const SHIELD_DURATION_SECONDS = 10;
+const MAX_ENEMY_CAP = 3;
+const BASE_ENEMY_COUNT = 1;
+const WAVE_ENEMY_DIVISOR = 2;
+const BASE_SPAWN_CHANCE = 0.01;
+const SPAWN_CHANCE_INCREMENT = 0.002;
+const POWERUP_SPAWN_CHANCE = 0.001;
+const MAX_POWERUPS = 1;
+
 const gameState = {
     running: false,
     britishScore: 0,
@@ -329,13 +341,13 @@ class Plane {
     
     applyPowerUp(type) {
         if (type === 'health') {
-            this.health = Math.min(this.maxHealth, this.health + 50);
+            this.health = Math.min(this.maxHealth, this.health + HEALTH_POWERUP_AMOUNT);
         } else if (type === 'rapidfire') {
             this.rapidFire = true;
-            this.rapidFireTime = TARGET_FPS * 5; // 5 seconds
+            this.rapidFireTime = TARGET_FPS * RAPID_FIRE_DURATION_SECONDS;
         } else if (type === 'shield') {
             this.shield = true;
-            this.shieldTime = TARGET_FPS * 10; // 10 seconds
+            this.shieldTime = TARGET_FPS * SHIELD_DURATION_SECONDS;
         }
     }
     
@@ -601,7 +613,7 @@ function updateScore() {
 function gameOver(reason) {
     gameState.gameOver = true;
     gameState.running = false;
-    const finalScore = gameState.britishScore;
+    const finalScore = parseInt(gameState.britishScore) || 0; // Ensure it's a number
     const isHighScore = finalScore === gameState.highScore && finalScore > 0;
     
     const statusElement = document.getElementById('game-status');
@@ -735,14 +747,14 @@ function gameLoop() {
         checkWaveProgress();
 
         // Dynamic spawning based on wave
-        const maxEnemies = Math.min(3, 1 + Math.floor(gameState.wave / 2));
-        const spawnChance = 0.01 + (gameState.wave * 0.002);
+        const maxEnemies = Math.min(MAX_ENEMY_CAP, BASE_ENEMY_COUNT + Math.floor(gameState.wave / WAVE_ENEMY_DIVISOR));
+        const spawnChance = BASE_SPAWN_CHANCE + (gameState.wave * SPAWN_CHANCE_INCREMENT);
         if (Math.random() < spawnChance && germanPlanes.length < maxEnemies) {
             spawnGermanPlane();
         }
         
         // Power-up spawning
-        if (Math.random() < 0.001 && powerUps.length < 1) {
+        if (Math.random() < POWERUP_SPAWN_CHANCE && powerUps.length < MAX_POWERUPS) {
             spawnPowerUp();
         }
 
