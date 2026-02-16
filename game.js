@@ -17,6 +17,9 @@ const SPAWN_CHANCE_INCREMENT = 0.002;
 const POWERUP_SPAWN_CHANCE = 0.001;
 const MAX_POWERUPS = 1;
 const BASE_ENEMIES_PER_WAVE = 3;
+const POWERUP_DROP_CHANCE = 0.2;
+const SMOKE_HEALTH_THRESHOLD = 0.4;
+const SMOKE_SPAWN_CHANCE = 0.3;
 
 const gameState = {
     running: false,
@@ -27,7 +30,7 @@ const gameState = {
     wave: 0,
     enemiesInWave: 0,
     enemiesDefeated: 0,
-    highScore: parseInt(localStorage.getItem('wwiHighScore')) || 0,
+    highScore: parseInt(localStorage.getItem('wwiHighScore'), 10) || 0,
     showFPS: false,
     lastFrameTime: Date.now(),
     fps: TARGET_FPS,
@@ -241,7 +244,7 @@ class Plane {
             this.drawHealthBar();
             
             // Draw smoke trail for damaged planes
-            if (this.health < this.maxHealth * 0.4 && Math.random() < 0.3) {
+            if (this.health < this.maxHealth * SMOKE_HEALTH_THRESHOLD && Math.random() < SMOKE_SPAWN_CHANCE) {
                 particles.push(new Particle(this.x + this.width / 2, 
                                            this.y + this.height / 2, 'smoke'));
             }
@@ -546,7 +549,7 @@ function checkCollisions() {
                     updateScore();
                     
                     // Chance to spawn power-up
-                    if (Math.random() < 0.2) {
+                    if (Math.random() < POWERUP_DROP_CHANCE) {
                         spawnPowerUp();
                     }
                 }
