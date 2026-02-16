@@ -16,6 +16,7 @@ const BASE_SPAWN_CHANCE = 0.01;
 const SPAWN_CHANCE_INCREMENT = 0.002;
 const POWERUP_SPAWN_CHANCE = 0.001;
 const MAX_POWERUPS = 1;
+const BASE_ENEMIES_PER_WAVE = 3;
 
 const gameState = {
     running: false,
@@ -613,7 +614,7 @@ function updateScore() {
 function gameOver(reason) {
     gameState.gameOver = true;
     gameState.running = false;
-    const finalScore = parseInt(gameState.britishScore) || 0; // Ensure it's a number
+    const finalScore = gameState.britishScore; // Already a number
     const isHighScore = finalScore === gameState.highScore && finalScore > 0;
     
     const statusElement = document.getElementById('game-status');
@@ -651,7 +652,7 @@ function resetGame() {
     gameState.britishScore = 0;
     gameState.germanScore = 0;
     gameState.wave = 1;
-    gameState.enemiesInWave = 3;
+    gameState.enemiesInWave = BASE_ENEMIES_PER_WAVE;
     gameState.enemiesDefeated = 0;
     updateScore();
     document.getElementById('game-status').textContent = 'Good luck, pilot!';
@@ -708,7 +709,7 @@ function checkWaveProgress() {
     // Check if wave is complete
     if (gameState.enemiesDefeated >= gameState.enemiesInWave && germanPlanes.length === 0) {
         gameState.wave++;
-        gameState.enemiesInWave = 3 + gameState.wave;
+        gameState.enemiesInWave = BASE_ENEMIES_PER_WAVE + gameState.wave;
         gameState.enemiesDefeated = 0;
         updateScore();
         document.getElementById('game-status').textContent = `Wave ${gameState.wave} - Get Ready!`;
@@ -833,7 +834,7 @@ document.addEventListener('keydown', (e) => {
     if (!gameState.running && !gameState.gameOver) {
         gameState.running = true;
         gameState.wave = 1;
-        gameState.enemiesInWave = 3;
+        gameState.enemiesInWave = BASE_ENEMIES_PER_WAVE;
         gameState.enemiesDefeated = 0;
         document.getElementById('game-status').textContent = 'Good luck, pilot!';
         updateScore();
